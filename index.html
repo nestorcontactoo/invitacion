@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitación Digital - Néstor 4 Años</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'text-soft': '#4a4a4a',
+                        'accent-orange': '#ff7002',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #ffffff;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            color: #4a4a4a;
+        }
+
+        /* --- Animación de los Globos --- */
+        .balloon {
+            position: absolute;
+            z-index: 50;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            pointer-events: none;
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.1), 5px 15px 30px rgba(0,0,0,0.08);
+        }
+
+        .balloon::before {
+            content: "";
+            position: absolute;
+            top: 15%;
+            left: 15%;
+            width: 30%;
+            height: 30%;
+            background: rgba(255, 255, 255, 0.45);
+            border-radius: 50%;
+            filter: blur(4px);
+        }
+
+        .balloon-knot {
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 8px;
+            background: inherit;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+        .balloon-string {
+            position: absolute;
+            bottom: -85px;
+            left: 50%;
+            width: 1px;
+            height: 80px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.15), transparent);
+            transform: translateX(-50%);
+        }
+
+        @keyframes float-up {
+            0% { transform: translateY(115vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-35vh) rotate(10deg); opacity: 0; }
+        }
+
+        @keyframes sway {
+            0%, 100% { margin-left: -20px; }
+            50% { margin-left: 20px; }
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .music-pulse {
+            animation: pulse-soft 2s infinite ease-in-out;
+        }
+
+        .hero-img-container {
+            position: relative;
+            z-index: 10;
+            filter: drop-shadow(0 25px 50px rgba(0,0,0,0.12));
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo-wrapper {
+            margin-top: -15px;
+            margin-bottom: 25px;
+            z-index: 30;
+            min-height: 20px; /* Mantiene el espacio mínimo */
+        }
+
+        #config-panel {
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000;
+        }
+
+        #config-panel.open {
+            transform: translateX(0);
+        }
+
+        .countdown-card {
+            background-color: #fcfcfc;
+            min-width: 75px;
+            border: 1px solid rgba(0,0,0,0.02);
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.03);
+        }
+
+        #interaction-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            cursor: pointer;
+        }
+
+        .svg-character {
+            width: 100%;
+            max-width: 380px;
+            height: auto;
+            animation: bounce-slow 4s ease-in-out infinite;
+        }
+
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+    </style>
+</head>
+<body class="bg-white">
+
+    <div id="interaction-overlay"></div>
+
+    <!-- CONTROL DE MÚSICA -->
+    <div class="fixed top-4 left-4 z-[2100] flex items-center gap-3">
+        <button id="music-btn" class="bg-white/80 backdrop-blur shadow-lg p-4 rounded-full hover:bg-white transition-all border border-gray-100">
+            <div id="play-icon">
+                <svg class="w-6 h-6 text-text-soft" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            <div id="pause-icon" class="hidden text-text-soft font-bold">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </div>
+        </button>
+        <span id="music-prompt" class="bg-white/90 text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-full shadow-sm text-text-soft music-pulse border border-gray-50">
+            Toca para música 🎵
+        </span>
+    </div>
+
+    <!-- Botón de Configuración -->
+    <button id="config-toggle" class="fixed top-4 right-4 z-[2100] bg-white/40 backdrop-blur p-3 rounded-full hover:bg-white transition-all text-xs opacity-20 hover:opacity-100">
+        ⚙️
+    </button>
+
+    <!-- Panel Lateral -->
+    <aside id="config-panel" class="fixed top-0 right-0 h-full w-80 bg-white border-l shadow-2xl p-8 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6 mt-10">
+            <h2 class="text-xl font-bold">Configuración</h2>
+            <button onclick="document.getElementById('config-panel').classList.remove('open')">✕</button>
+        </div>
+        
+        <div class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold uppercase mb-2 text-gray-400">Imagen PNG / Logo URL</label>
+                <input type="text" id="cfg-logo" class="w-full p-3 bg-gray-50 border rounded-xl text-sm" placeholder="URL de tu imagen .png">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase mb-2 text-gray-400">Música (MP3)</label>
+                <input type="text" id="cfg-music" class="w-full p-3 bg-gray-50 border rounded-xl text-sm" placeholder="URL .mp3">
+            </div>
+            <button id="save-cfg" class="w-full bg-black text-white py-4 rounded-2xl font-bold hover:bg-gray-800 transition-all shadow-lg text-sm uppercase tracking-widest">Guardar Cambios</button>
+        </div>
+    </aside>
+
+    <section class="main-hero relative min-h-screen flex flex-col items-center justify-start p-4 text-center overflow-hidden">
+        
+        <div id="balloon-container" class="absolute inset-0 pointer-events-none"></div>
+
+        <!-- PERSONAJE SVG Y ESPACIO PARA IMAGEN -->
+        <div class="hero-img-container mb-0 pt-10">
+            <div class="svg-character">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="100" cy="185" rx="40" ry="10" fill="rgba(0,0,0,0.05)" />
+                    <path d="M85 50 L100 20 L115 50 Z" fill="#ff7002" />
+                    <circle cx="100" cy="18" r="4" fill="#fefc04" />
+                    <circle cx="100" cy="90" r="45" fill="#FFE0BD" />
+                    <circle cx="85" cy="85" r="4" fill="#333" />
+                    <circle cx="115" cy="85" r="4" fill="#333" />
+                    <path d="M80 105 Q100 125 120 105" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round" />
+                    <path d="M60 135 Q100 130 140 135 L150 190 L50 190 Z" fill="#a2d5ed" />
+                    <text x="100" y="175" font-family="Montserrat" font-weight="900" font-size="30" fill="white" text-anchor="middle">4</text>
+                </svg>
+            </div>
+
+            <!-- APARTADO PARA LA IMAGEN PNG (Sin placeholders) -->
+            <div id="logo-container" class="logo-wrapper">
+                <img id="actual-logo" src="" class="hidden max-w-[140px] max-h-[140px] object-contain drop-shadow-md" alt="Imagen Personalizada">
+            </div>
+        </div>
+
+        <!-- TEXTO PRINCIPAL -->
+        <div class="relative z-20 w-full max-w-2xl bg-white/70 backdrop-blur-xl p-8 md:p-12 rounded-[3rem] border border-white/80 shadow-2xl shadow-gray-200/40 -mt-10">
+            <p class="text-[10px] md:text-xs uppercase tracking-[0.5em] text-gray-400 font-bold mb-4">Te espero para celebrar mis</p>
+            <h1 class="text-7xl md:text-9xl font-black text-text-soft mb-6 tracking-tighter">4 AÑOS</h1>
+            
+            <div class="flex flex-col mb-8">
+                <p class="text-2xl md:text-3xl text-text-soft font-extrabold mb-1">22 de Marzo, 2026</p>
+                <p class="text-gray-400 font-semibold tracking-wide">4:00 PM • Casa de mis papás</p>
+            </div>
+            
+            <!-- Contador -->
+            <div id="timer" class="flex gap-2 md:gap-4 justify-center">
+                <div class="countdown-card px-3 py-5 rounded-[1.5rem]">
+                    <span id="d" class="block text-3xl font-black text-text-soft">00</span>
+                    <span class="text-[8px] uppercase font-black text-gray-300 tracking-tighter">Días</span>
+                </div>
+                <div class="countdown-card px-3 py-5 rounded-[1.5rem]">
+                    <span id="h" class="block text-3xl font-black text-text-soft">00</span>
+                    <span class="text-[8px] uppercase font-black text-gray-300 tracking-tighter">Horas</span>
+                </div>
+                <div class="countdown-card px-3 py-5 rounded-[1.5rem]">
+                    <span id="m" class="block text-3xl font-black text-text-soft">00</span>
+                    <span class="text-[8px] uppercase font-black text-gray-300 tracking-tighter">Mins</span>
+                </div>
+                <div class="countdown-card px-3 py-5 rounded-[1.5rem]">
+                    <span id="s" class="block text-3xl font-black text-accent-orange">00</span>
+                    <span class="text-[8px] uppercase font-black text-orange-300 tracking-tighter">Segs</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER SIMPLIFICADO -->
+        <footer class="mt-auto py-12">
+            <p class="text-[10px] font-bold tracking-[0.5em] uppercase text-gray-300">Diseñado por <span class="text-gray-500">Néstor</span></p>
+        </footer>
+    </section>
+
+    <audio id="audio-player" preload="auto" loop crossorigin="anonymous"></audio>
+
+    <script>
+        const configKey = 'party_nestor_vfinal_clean';
+        const customPalette = ['#fba200', '#ff7002', '#a2d5ed', '#fefc04', '#aedb03', '#ffffff'];
+
+        const defaultConfig = {
+            musicUrl: 'https://files.catbox.moe/p9o8un.mp3',
+            logoUrl: ''
+        };
+
+        let state = JSON.parse(localStorage.getItem(configKey)) || defaultConfig;
+
+        const audio = document.getElementById('audio-player');
+        const balloonContainer = document.getElementById('balloon-container');
+        const overlay = document.getElementById('interaction-overlay');
+        const musicBtn = document.getElementById('music-btn');
+        const playIcon = document.getElementById('play-icon');
+        const pauseIcon = document.getElementById('pause-icon');
+        const musicPrompt = document.getElementById('music-prompt');
+
+        function init() {
+            audio.src = state.musicUrl;
+            document.getElementById('cfg-music').value = state.musicUrl;
+            document.getElementById('cfg-logo').value = state.logoUrl;
+
+            // Manejo de la Imagen PNG
+            const actualLogo = document.getElementById('actual-logo');
+            if (state.logoUrl && state.logoUrl.trim() !== "") {
+                actualLogo.src = state.logoUrl;
+                actualLogo.classList.remove('hidden');
+            }
+
+            startCountdown();
+            generateBalloons();
+
+            const startAll = () => {
+                togglePlay(true);
+                triggerConfetti();
+                overlay.style.display = 'none';
+                musicPrompt.innerText = "REPRODUCIENDO 🎶";
+                setTimeout(() => musicPrompt.classList.add('opacity-0'), 4000);
+            };
+
+            overlay.addEventListener('click', startAll);
+            musicBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                togglePlay();
+            });
+        }
+
+        function togglePlay(forcePlay = false) {
+            if (audio.paused || forcePlay) {
+                audio.play().then(() => {
+                    playIcon.classList.add('hidden');
+                    pauseIcon.classList.remove('hidden');
+                }).catch(() => {});
+            } else {
+                audio.pause();
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+                musicPrompt.classList.remove('opacity-0');
+                musicPrompt.innerText = "PAUSADO";
+            }
+        }
+
+        function generateBalloons() {
+            const create = () => {
+                const b = document.createElement('div');
+                b.className = 'balloon';
+                const size = Math.random() * 30 + 70;
+                const left = Math.random() * 95;
+                const color = customPalette[Math.floor(Math.random() * customPalette.length)];
+                const duration = Math.random() * 5 + 10;
+                const delay = Math.random() * 5;
+
+                b.style.width = `${size}px`;
+                b.style.height = `${size * 1.3}px`;
+                b.style.left = `${left}%`;
+                b.style.backgroundColor = color;
+                b.style.background = `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.4) 0%, ${color} 60%, ${color} 100%)`;
+                
+                const knot = document.createElement('div');
+                knot.className = 'balloon-knot';
+                b.appendChild(knot);
+
+                const string = document.createElement('div');
+                string.className = 'balloon-string';
+                b.appendChild(string);
+
+                b.style.animation = `float-up ${duration}s linear ${delay}s infinite, sway 4s ease-in-out ${delay}s infinite`;
+
+                balloonContainer.appendChild(b);
+                setTimeout(() => b.remove(), (duration + delay) * 1000);
+            };
+            for(let i=0; i<8; i++) create();
+            setInterval(create, 2500);
+        }
+
+        function startCountdown() {
+            const target = new Date('March 22, 2026 16:00:00').getTime();
+            const update = () => {
+                const now = new Date().getTime();
+                const diff = target - now;
+                if (diff <= 0) return;
+                document.getElementById('d').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+                document.getElementById('h').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+                document.getElementById('m').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+                document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+            };
+            setInterval(update, 1000);
+            update();
+        }
+
+        document.getElementById('config-toggle').addEventListener('click', () => {
+            document.getElementById('config-panel').classList.toggle('open');
+        });
+        
+        document.getElementById('save-cfg').addEventListener('click', () => {
+            state.musicUrl = document.getElementById('cfg-music').value;
+            state.logoUrl = document.getElementById('cfg-logo').value;
+            localStorage.setItem(configKey, JSON.stringify(state));
+            location.reload();
+        });
+
+        function triggerConfetti() {
+            confetti({
+                particleCount: 150,
+                spread: 100,
+                origin: { y: 0.8 },
+                colors: customPalette
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
